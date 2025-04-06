@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aplikasi Catatan & Alarm</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f2f2f2;
+      }
+      .container {
+        max-width: 500px;
+        margin: 60px auto;
+        padding: 50px;
+        background: rgb(149, 143, 157);
+        box-shadow: 0 0 10px rgba(222, 134, 134, 0.655);
+        border-radius: 10px;
+      }
+      h2 {
+        text-align: center;
+      }
+      input,
+      textarea,
+      select,
+      button {
+        width: 100%;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #f9d0e7;
+      }
+      .note-list {
+        margin-top: 20px;
+      }
+      .note-item {
+        padding: 10px;
+        background: #a9a9a9;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        position: relative;
+      }
+      .note-item button {
+        position: absolute;
+        top: 40px;
+        right: 0px;
+        margin-left: 85px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" id="login-section">
+      <h2>Login</h2>
+      <input type="text" id="username" placeholder="Username" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div class="container" id="app-section" style="display: none">
+      <h2>Aplikasi Catatan & Alarm</h2>
+      <div id="user-role"></div>
+      <textarea id="note" placeholder="Tulis catatan..."></textarea>
+      <input type="datetime-local" id="alarmTime" />
+      <button onclick="simpanCatatan()">Simpan Catatan</button>
+      <div class="note-list" id="noteList"></div>
+    </div>
+
+    <script>
+      const users = [
+        { username: "admin", password: "adalah", role: "biasa" },
+        { username: "guest", password: "guest123", role: "terbatas" },
+      ];
+
+      let currentUser = null;
+      let editingIndex = -1;
+
+      function login() {
+        const uname = document.getElementById("username").value;
+        const pwd = document.getElementById("password").value;
+        const user = users.find(
+          (u) => u.username === uname && u.password === pwd
+        );
+
+        if (user) {
+          currentUser = user;
+          document.getElementById("login-section").style.display = "none";
+          document.getElementById("app-section").style.display = "block";
+          document.getElementById(
+            "user-role"
+          ).innerText = `Login sebagai: ${user.role}`;
+          loadCatatan();
+        } else {
+          alert("Login gagal");
+        }
+      }
+
+      function simpanCatatan() {
+        if (!currentUser || currentUser.role === "terbatas") {
+          alert(
+            "Anda tidak memiliki izin untuk menambahkan atau mengedit catatan."
+          );
+          return;
+        }
+        const note = document.getElementById("note").value;
+        const time = document.getElementById("alarmTime").value;
+        if (!note || !time) return alert("Isi catatan dan alarm waktu!");
+
+        let notes = JSON.parse(localStorage.getItem("notes") || "[]");
+        if (editingIndex >= 0) {
+          notes[editingIndex] = { note, time };
+          editingIndex = -1;
+        } else {
+          notes.push({ note, time });
+        }
+        localStorage.setItem("notes", JSON.stringify(notes));
+        document.getElementById("note").value = "";
+        document.getElementById("alarmTime").value = "";
+        loadCatatan();
+      }
+
+      function editCatatan(index) {
+        const notes = JSON.parse(localStorage.getItem("notes") || "[]");
+        document.getElementById("note").value = notes[index].note;
+        document.getElementById("alarmTime").value = notes[index].time;
+        editingIndex = index;
+      }
+
+      function hapusCatatan(index) {
+        let notes = JSON.parse(localStorage.getItem("notes") || "[]");
+        notes.splice(index, 1);
+        localStorage.setItem("notes", JSON.stringify(notes));
+        loadCatatan();
+      }
+
+      function loadCatatan() {
+        const noteList = document.getElementById("noteList");
+        noteList.innerHTML = "";
+        const notes = JSON.parse(localStorage.getItem("notes") || "[]");
+        const now = new Date();
+
+        notes.forEach((item, index) => {
+          const alarmTime = new Date(item.time);
+          if (alarmTime > now) {
+            setTimeout(() => {
+              alert("⏰ Pengingat: " + item.note);
+            }, alarmTime - now);
+          }
+
+          const div = document.createElement("div");
+          div.className = "note-item";
+          div.innerHTML = `
+        ${item.note} - [Alarm: ${item.time}]
+        <button onclick="editCatatan(${index})">Edit</button>
+        <button onclick="hapusCatatan(${index})">Hapus</button>
+      `;
+          noteList.appendChild(div);
+        });
+      }
+    </script>
+  </body>
+</html>
